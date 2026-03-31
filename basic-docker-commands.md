@@ -114,12 +114,12 @@ docker inspect <container>
 
 ## 💻 Interactive Mode
 
-### STDIN
+### Make a container listen to the STDIN
 ```bash
 docker run -i <image>
 ```
 
-### Terminal
+### Attach to a container's terminal
 ```bash
 docker run -t <image>
 ```
@@ -132,6 +132,7 @@ docker run -it <image>
 ---
 
 ## 🌐 Port Mapping
+Access the things running on docker inside docker host from the outside
 
 ```bash
 docker run -p <host_port>:<container_port> <image>
@@ -187,6 +188,7 @@ graph LR
 ---
 
 ## 📜 Logs
+See the logs generated in a container running in the background
 
 ```bash
 docker logs <container>
