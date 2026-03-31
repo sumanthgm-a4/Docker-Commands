@@ -203,24 +203,58 @@ View logs printed to STDOUT.
 docker run -d postgres
 docker run -d mysql
 docker run -d mongo
+docker run -d redis
+docker run -d mariadb
 ```
 
-### 🔴 Java / Backend
+### 🔴 Java / Backend Stack
 ```bash
 docker run -d openjdk
 docker run -d maven
+docker run -d gradle
 ```
 
-### ⚙️ Dev Tools
+### 🌐 Web Servers / Reverse Proxies
+```bash
+docker run -d nginx
+docker run -d httpd
+docker run -d traefik
+```
+
+### ⚙️ DevOps / CI-CD
 ```bash
 docker run -d jenkins
-docker run -d redis
-docker run -d nginx
+docker run -d gitlab/gitlab-ce
+docker run -d sonarqube
 ```
 
-### 🧪 Utility / Fun
+### 📡 Messaging / Streaming
 ```bash
-docker run timer
+docker run -d rabbitmq
+docker run -d apache/kafka
+docker run -d zookeeper
+```
+
+### 🔍 Monitoring / Logging
+```bash
+docker run -d grafana/grafana
+docker run -d prom/prometheus
+docker run -d elasticsearch
+docker run -d kibana
+```
+
+### 🧪 Testing / Debugging
+```bash
+docker run -it alpine
+docker run -it busybox
+docker run -it ubuntu
+```
+
+### 🧱 Full Dev Environments
+```bash
+docker run -d node
+docker run -d python
+docker run -d golang
 ```
 
 ---
