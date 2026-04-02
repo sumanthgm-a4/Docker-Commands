@@ -109,18 +109,21 @@ flowchart LR
 
 ### docker-compose.yaml (Version 2)
 
-```yaml
+```yaml id="g7x2lm"
 version: "2"
 
 services:
   redis:
     image: redis
+    container_name: redis-container
 
   db:
     image: postgres
+    container_name: postgres-container
 
   voting-app:
     image: voting-app
+    container_name: voting-app-container
     ports:
       - "5000:8000"
     depends_on:
@@ -128,12 +131,14 @@ services:
 
   worker:
     image: worker
+    container_name: worker-container
     depends_on:
       - redis
       - db
 
   result-app:
     image: result-app
+    container_name: result-app-container
     ports:
       - "5001:8080"
     depends_on:
@@ -153,6 +158,103 @@ So inside containers:
 * `db` → resolves to PostgreSQL container
 
 No linking needed.
+
+---
+## 🧠 Container Naming in Docker Compose
+
+### 🔹 Default Naming Convention
+
+If you **don’t specify `container_name`**, Docker Compose automatically names containers like:
+
+```id="c6rf9q"
+<project-name>_<service-name>_<index>
+```
+
+### Example
+
+If your folder is named `voting-app`, then:
+
+```id="tljbwb"
+voting-app_redis_1
+voting-app_db_1
+voting-app_voting-app_1
+voting-app_worker_1
+voting-app_result-app_1
+```
+
+---
+
+## 🔹 How Project Name is Decided
+
+By default:
+
+* It uses the **folder name**
+
+You can override it:
+
+```bash id="4rj2z3"
+docker compose -p myproject up
+```
+
+Then names become:
+
+```id="9yl7zn"
+myproject_redis_1
+myproject_db_1
+```
+
+---
+
+## 🔹 Custom Container Names
+
+You can explicitly set names using:
+
+```yaml id="3d0m2r"
+container_name: my-custom-name
+```
+
+---
+
+## ⚠️ Important Notes
+
+* `container_name` must be **unique**
+* You **cannot scale** services with `container_name`
+
+❌ This will break:
+
+```bash id="m9r0ok"
+docker compose up --scale worker=3
+```
+
+Because:
+
+* Docker cannot create multiple containers with the same name
+
+---
+
+## 🧠 Best Practice
+
+* Avoid `container_name` unless really needed
+* Use **service names for communication**, not container names
+
+Example:
+
+```python id="pj9sxm"
+host="redis"   # ✅ correct
+```
+
+NOT:
+
+```python id="9x4v9t"
+host="redis-container" ❌
+```
+
+---
+
+## 🔥 Key Insight
+
+👉 Service name = DNS hostname inside Docker network
+👉 Container name = just a label for humans
 
 ---
 
