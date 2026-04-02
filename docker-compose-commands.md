@@ -17,6 +17,11 @@ You define everything declaratively and run:
 ```bash
 docker compose up
 ```
+Above command works when the yaml file is named ```docker-compose.yaml``` or ```docker-compose.yml```.     
+To run using a yaml file of arbitrary name, use the ```-f``` flag:
+```bash
+docker compose -f <filename> up
+```
 ---
 
 ## ⚠️ Assumption
@@ -543,6 +548,292 @@ For real apps:
 ---
 ---
 
+# 🌱 Docker Compose — Environment Variables (with Spring Boot)
+
+## 📌 What are Environment Variables in Docker Compose?
+
+Environment variables let you:
+
+* Pass configuration into containers at runtime
+* Avoid hardcoding values in code
+* Customize behavior per environment (dev, prod, etc.)
+
+---
+
+## 🧾 Method 1: Using `environment` (Inline)
+
+```yaml
+services:
+  app:
+    image: my-spring-app
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/mydb
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: secret
+```
+
+---
+
+## 🧾 Method 2: Using `.env` File (Recommended)
+
+### Step 1: Create `.env`
+
+```env
+DB_URL=jdbc:postgresql://db:5432/mydb
+DB_USER=postgres
+DB_PASS=secret
+```
+
+---
+
+### Step 2: Reference in `docker-compose.yaml`
+
+```yaml
+services:
+  app:
+    image: my-spring-app
+    environment:
+      SPRING_DATASOURCE_URL: ${DB_URL}
+      SPRING_DATASOURCE_USERNAME: ${DB_USER}
+      SPRING_DATASOURCE_PASSWORD: ${DB_PASS}
+```
+
+---
+
+## 🧾 Method 3: Using `env_file`
+
+```yaml
+services:
+  app:
+    image: my-spring-app
+    env_file:
+      - .env
+```
+
+---
+
+## ⚠️ Priority Order (Important)
+
+If same variable exists in multiple places:
+
+1. `docker compose run -e`
+2. `environment:` in YAML
+3. `env_file`
+4. `.env` file
+
+---
+
+## 🌱 Spring Boot — How It Reads Env Vars
+
+Spring Boot automatically maps environment variables to properties.
+
+### 🔥 Rule:
+
+```text
+SPRING_DATASOURCE_URL
+↓
+spring.datasource.url
+```
+
+---
+
+## 🔄 Mapping Rules
+
+| Env Variable                 | Spring Property              |
+| ---------------------------- | ---------------------------- |
+| `SPRING_DATASOURCE_URL`      | `spring.datasource.url`      |
+| `SPRING_DATASOURCE_USERNAME` | `spring.datasource.username` |
+| `SPRING_DATASOURCE_PASSWORD` | `spring.datasource.password` |
+
+---
+
+## 🧠 Key Insight
+
+👉 Replace `.` with `_`
+👉 Use **UPPERCASE**
+
+---
+
+## 🏗️ Overriding `application.properties`
+
+### application.properties
+
+```properties
+spring.datasource.url=jdbc:postgresql://localhost:5432/devdb
+```
+
+---
+
+### docker-compose override
+
+```yaml
+environment:
+  SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/proddb
+```
+
+---
+
+### ✅ Result
+
+```text
+Spring Boot will use:
+jdbc:postgresql://db:5432/proddb
+```
+
+---
+
+## 🏗️ Overriding `application.yaml`
+
+### application.yaml
+
+```yaml
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/devdb
+```
+
+---
+
+### docker-compose override
+
+```yaml
+environment:
+  SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/proddb
+```
+
+---
+
+### ✅ Same behavior
+
+Env vars override YAML too.
+
+---
+
+## 🔥 Nested Properties Example
+
+### application.yaml
+
+```yaml
+spring:
+  redis:
+    host: localhost
+    port: 6379
+```
+
+---
+
+### Override in Compose
+
+```yaml
+environment:
+  SPRING_REDIS_HOST: redis
+  SPRING_REDIS_PORT: 6379
+```
+
+---
+
+## 🧠 Arrays & Complex Config (Advanced)
+
+Spring Boot also supports indexed env vars:
+
+```yaml
+environment:
+  MY_SERVERS_0: server1
+  MY_SERVERS_1: server2
+```
+
+Maps to:
+
+```yaml
+my:
+  servers:
+    - server1
+    - server2
+```
+
+---
+
+## 🚀 Profiles via Env Variables
+
+```yaml
+environment:
+  SPRING_PROFILES_ACTIVE: prod
+```
+
+---
+
+### Equivalent to:
+
+```bash
+--spring.profiles.active=prod
+```
+
+---
+
+## 🔐 Best Practice (Secrets)
+
+❌ Don’t hardcode passwords in YAML
+
+Use:
+
+* `.env` file (for local dev)
+* Docker secrets (for prod)
+* External secret managers
+
+---
+
+## 🧠 Final Takeaways
+
+* Use `environment:` for quick configs
+* Use `.env` for cleaner setups
+* Spring Boot auto-maps env → properties
+* Env vars **override application configs**
+* Always use service names (`db`, `redis`) in URLs
+
+---
+
+## 🔥 Real Example (Spring Boot + Postgres)
+
+```yaml
+version: "2"
+
+services:
+  db:
+    image: postgres
+    environment:
+      POSTGRES_DB: mydb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: secret
+
+  app:
+    image: my-spring-app
+    ports:
+      - "8080:8080"
+    depends_on:
+      - db
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/mydb
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: secret
+      SPRING_PROFILES_ACTIVE: prod
+```
+
+---
+
+## 💀 Common Mistakes
+
+❌ Using `localhost` inside container
+✔️ Use `db`, `redis`, etc.
+
+❌ Forgetting uppercase + underscores
+✔️ `SPRING_DATASOURCE_URL`
+
+❌ Expecting `depends_on` to wait for DB
+✔️ Add retry logic
+
+---
+---
+
 ## 🧠 Key Takeaways
 
 * Docker Compose simplifies multi-container systems
@@ -551,5 +842,6 @@ For real apps:
 * Networks allow clean architecture separation
 * `depends_on` controls order, not readiness
 * Always use service names instead of `localhost`
+* Use environment property to override 
 
 ---
