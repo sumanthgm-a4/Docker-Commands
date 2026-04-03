@@ -1,1 +1,4 @@
 *.txt
+
+# Locally running Docker Regsitry
+/local-registry-data
