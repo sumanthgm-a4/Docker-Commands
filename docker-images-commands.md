@@ -473,6 +473,44 @@ def sleep(seconds=50):
 - Use **BOTH** → best combo (real-world usage)
 
 ---
+---
+
+# 📤 Share Docker Images
+
+## 1. Docker Registry 
+
+Use Docker Registries like Docker Hub or even a locally running registry to share images 
+
+```bash
+docker push <image>
+```
+
+and on another system:      
+```bash
+docker pull <image>
+```
+---
+
+## 2. Export as a file
+
+Export the Docker image into a ```.tar``` file and share the file
+
+```bash
+docker save -o <name>.tar <image>       
+```
+
+And on the receiver's side, load the image from the ```.tar``` file
+```bash
+docker load -i <name>.tar
+```
+
+And run the image
+```bash
+docker run <image>
+```
+
+---
+---
 
 ## ⚡ Quick Notes
 
