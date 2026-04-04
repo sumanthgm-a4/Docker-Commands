@@ -1,0 +1,93 @@
+version: "3.9" # Compose file version (3.9 is common & stable)
+
+services: # All your containers (services) live here
+    webapp:
+        build: # Instead of pulling an image, build from Dockerfile
+            context: ./webapp # Folder where Dockerfile exists
+            dockerfile: Dockerfile # Dockerfile name (default is Dockerfile anyway)
+            args:
+                APP_ENV: production # Build-time variable (used via ARG in Dockerfile)
+        container_name: my_web_app # Custom name (else Docker auto-generates one)
+
+        ports:
+            - "8080:80" # HOST:CONTAINER → access app via localhost:8080
+
+        networks:
+            - app_network # Attach to custom network (for internal communication)
+
+        environment:
+            - DEBUG=false # Runtime env var (available inside container)
+            - API_URL=http://api:5000 # Talks to 'api' service using service name (DNS)
+
+        volumes:
+            - webapp_data:/usr/src/app/data
+            # Named volume → persists data even if container is removed
+
+        command: python app.py
+        # Overrides default CMD in Dockerfile (what container runs)
+
+        # restart: always
+        # (optional) auto-restart container if it crashes
+
+    api:
+        image: my_api_image:latest # Uses already built image (local or Docker Hub)
+        container_name: my_api_service
+
+        ports:
+            - "5000:5000" # Expose API on localhost:5000
+
+        networks:
+            - app_network # Same network → can talk to webapp & db via names
+
+        environment:
+            - DB_HOST=db # 'db' is the service name → acts like hostname
+            - DB_USER=root
+            - DB_PASS=password
+
+        depends_on:
+            - db
+            # Ensures db starts before api (BUT doesn't guarantee DB is ready)
+
+        # command: python api.py
+        # (optional) override default command
+
+    db:
+        image: mysql:8.0 # Official MySQL image from Docker Hub
+        container_name: my_mysql_db
+
+        environment:
+            MYSQL_ROOT_PASSWORD: password # Root password (mandatory)
+            MYSQL_DATABASE: mydb # Auto-create this DB
+            MYSQL_USER: user # Create a non-root user
+            MYSQL_PASSWORD: userpass # Password for that user
+
+        ports:
+            - "3306:3306"
+            # Exposes MySQL to host (you can connect via localhost:3306)
+
+        volumes:
+            - db_data:/var/lib/mysql
+            # VERY IMPORTANT → stores DB data persistently
+            # Without this, data is lost when container is removed
+
+        networks:
+            - app_network # Same network → accessible by api via 'db'
+
+        # restart: always
+        # (optional) ensures DB restarts automatically
+
+networks:
+    app_network:
+        driver: bridge
+        # bridge = default network (single host)
+        # containers can talk using service names (DNS built-in)
+        # use 'overlay' if using Docker Swarm (multi-host)
+
+volumes:
+    webapp_data:
+        driver: local
+        # Stored on host machine (usually /var/lib/docker/volumes)
+
+    db_data:
+        driver: local
+        # Stores MySQL data → survives container deletion
