@@ -1,3 +1,344 @@
+# Docker Container Communication
+
+## Understanding `localhost` in Containers
+
+Inside a container:
+
+```bash
+localhost
+# or
+127.0.0.1
+```
+
+means:
+
+> "THIS CONTAINER ITSELF"
+
+It does **NOT** mean:
+
+* your host machine
+* another container
+* Docker engine
+
+Every container has:
+
+* its own network namespace
+* its own loopback interface
+* its own localhost
+
+---
+
+## Example Problem
+
+You have:
+
+* Container A → Spring Boot app
+* Container B → Kafka broker
+
+Inside the Spring Boot container:
+
+```properties
+spring.kafka.bootstrap-servers=localhost:9092
+```
+
+means:
+
+> "connect to port 9092 INSIDE THE SPRING BOOT CONTAINER"
+
+But Kafka is running in another container.
+
+So the connection fails.
+
+---
+
+## How Containers Actually Communicate
+
+Docker creates virtual networks.
+
+Containers connected to the same Docker network get:
+
+* their own internal IP address
+* automatic DNS-based name resolution
+
+Containers communicate using:
+
+```bash
+<container-name>:<port>
+```
+
+Example:
+
+```bash
+kafka:9092
+```
+
+NOT:
+
+```bash
+localhost:9092
+```
+
+---
+
+## Create a Docker Network
+
+```bash
+docker network create kafka-net
+```
+
+---
+
+## Run Kafka Container
+
+```bash
+docker run -d \
+  --name kafka \
+  --network kafka-net \
+  apache/kafka:latest
+```
+
+---
+
+## Run Spring Boot App Container
+
+```bash
+docker run -d \
+  --name app \
+  --network kafka-net \
+  my-spring-app
+```
+
+---
+
+## Internal Communication
+
+Inside the `app` container:
+
+```bash
+kafka:9092
+```
+
+works because Docker DNS resolves:
+
+```bash
+kafka
+```
+
+→ internal Kafka container IP address
+
+---
+
+## Container Communication
+
+```mermaid
+flowchart LR
+
+    subgraph Docker_Network["Docker Network: kafka-net"]
+
+        APP["app container"]
+        KAFKA["kafka container"]
+
+        APP -->|"kafka:9092"| KAFKA
+
+    end
+```
+
+---
+
+## When SHOULD You Use `localhost`?
+
+### 1. Inside the Same Container
+
+Use `localhost` when a process talks to another process inside the SAME container.
+
+Example:
+
+* nginx + app in same container
+* internal Redis process
+* local background worker
+
+```bash
+localhost
+```
+
+means:
+
+> "talk to myself"
+
+---
+
+### Same Container
+
+```mermaid
+flowchart LR
+
+    subgraph Container
+
+        APP["Application"]
+        REDIS["Redis"]
+
+        APP -->|"localhost:6379"| REDIS
+
+    end
+```
+
+---
+
+### 2. From Your HOST Machine to a Container
+
+When ports are published:
+
+```bash
+-p 9092:9092
+```
+
+Docker maps:
+
+```text
+HOST_PORT -> CONTAINER_PORT
+```
+
+Example:
+
+```bash
+localhost:9092
+```
+
+works from your laptop/browser/terminal.
+
+---
+
+### Host to Container
+
+```mermaid
+flowchart LR
+
+    HOST["Host Machine"]
+
+    CONTAINER["Kafka Container"]
+
+    HOST -->|"localhost:9092"| CONTAINER
+```
+
+---
+
+## Important Distinction
+
+### INSIDE a container
+
+```text
+localhost = THIS container
+```
+
+### OUTSIDE containers (your machine)
+
+```text
+localhost = YOUR machine
+```
+
+---
+
+## Container → Host Communication
+
+Sometimes containers need to access services running on your host machine.
+
+Docker Desktop provides:
+
+```bash
+host.docker.internal
+```
+
+Example:
+
+```bash
+curl http://host.docker.internal:8080
+```
+
+This means:
+
+> "connect to the host machine"
+
+---
+
+### Container to Host
+
+```mermaid
+flowchart LR
+
+    CONTAINER["Container"]
+
+    HOST["Host Machine"]
+
+    CONTAINER -->|"host.docker.internal:8080"| HOST
+```
+
+---
+
+## Quick Rules
+
+| From                          | To                  | Use                  |
+| ----------------------------- | ------------------- | -------------------- |
+| Container → same container    | itself              | localhost            |
+| Container → another container | same Docker network | container-name       |
+| Host → container              | published port      | localhost            |
+| Container → host machine      | host machine        | host.docker.internal |
+
+---
+
+## Real Kafka Example
+
+### WRONG
+
+Inside another container:
+
+```properties
+spring.kafka.bootstrap-servers=localhost:9092
+```
+
+This tries to find Kafka inside the SAME container.
+
+---
+
+### CORRECT
+
+```properties
+spring.kafka.bootstrap-servers=kafka:9092
+```
+
+where:
+
+* `kafka` = Docker container name
+* both containers are on same Docker network
+
+---
+
+## Full Big Picture
+
+```mermaid
+flowchart TB
+
+    INTERNET["Internet"]
+
+    HOST["Host Machine"]
+
+    subgraph Docker_Network["Docker Network"]
+
+        APP["App Container"]
+
+        KAFKA["Kafka Container"]
+
+        APP -->|"kafka:9092"| KAFKA
+
+    end
+
+    HOST -->|"localhost:8080"| APP
+
+    INTERNET --> HOST
+```
+
+
+---
+
 # Docker Networking — Complete Guide
 
 Docker networking allows containers to communicate with each other and with external systems. Understanding the types of networks and how to use them is essential for building multi-container applications.
